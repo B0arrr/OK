@@ -1,9 +1,7 @@
 import getopt
+import itertools
+import math
 import sys
-from cmath import sqrt
-import networkx as nx
-from networkx.algorithms import tree
-import matplotlib.pyplot as plt
 
 
 def main(argv):
@@ -12,6 +10,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "k:f:", ['file='])
     except:
+        print("podano złe parametry")
         sys.exit(2)
 
     for opt, arg in opts:
@@ -21,15 +20,21 @@ def main(argv):
             file = arg
 
     if k < 3:
+        print("k jest za małe")
         sys.exit(2)
 
     points = read_points_from_file(file)
-    edge_list_with_weights = generate_edge_list_with_weights(points)
-    graph = nx.Graph()
-    graph.add_weighted_edges_from(edge_list_with_weights)
-    mst = tree.maximum_spanning_edges(graph, algorithm="kruskal", data=False)
-    edgelist = list(mst)
-    print(sorted(sorted(e) for e in edgelist))
+
+    if k >= len(points):
+        print("k jest za duże")
+        sys.exit(2)
+
+    result = maximize_distance(points, k)
+
+    str = subset_indexes_str(points, result)
+
+    print(calculate_sum_of_distances(result))
+    print(str)
 
 
 def read_points_from_file(file):
@@ -43,18 +48,39 @@ def read_points_from_file(file):
         return points
 
 
-def generate_edge_list_with_weights(list):
-    elist = []
+def distance(point1, point2):
+    return math.dist(point1, point2)
 
-    for i in list:
-        list2 = list.copy()
-        list2.remove(i)
-        for j in list2:
-            weight = sqrt(pow(abs(i[0]-j[0]), 2) + pow(abs(i[1] - j[1]), 2))
-            weight_fixed = round(weight.real * 1000)
-            elist.append((list.index(i), list.index(j), weight_fixed))
-    print(elist)
-    return elist
+
+def maximize_distance(points, k):
+    max_distance = 0
+    max_subset = []
+
+    point_combinations = itertools.combinations(points, k)
+
+    for subset in point_combinations:
+        total_distance = sum(distance(p1, p2) for p1, p2 in itertools.combinations(subset, 2))
+
+        if total_distance > max_distance:
+            max_distance = total_distance
+            max_subset = subset
+
+    return max_subset
+
+
+def calculate_sum_of_distances(subset):
+    total = 0
+    for i in range(0, len(subset)):
+        for j in range(i + 1, len(subset)):
+            total += distance(subset[i], subset[j])
+    return round(total, 2)
+
+
+def subset_indexes_str(set, subset):
+    str = f'{set.index(subset[0])}'
+    for i in range(1, len(subset)):
+        str += f', {set.index(subset[i])}'
+    return str
 
 
 if __name__ == '__main__':
